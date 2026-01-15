@@ -23,28 +23,58 @@ class AuthController extends GetxController {
     super.onInit();
     _loadInitialState();
     _checkAuthState();
+    _listenToAuthChanges();
+  }
+
+  void _listenToAuthChanges() {
+    // Listen to Supabase auth state changes
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final session = data.session;
+      if (session != null) {
+        // User is logged in
+        _loadUserProfile(session.user.id);
+      } else {
+        // User is logged out
+        _currentUser.value = null;
+        _isLoggedIn.value = false;
+        _storage.remove('userId');
+      }
+    });
+  }
+
+  Future<void> _loadUserProfile(String userId) async {
+    try {
+      final response = await Supabase.instance.client
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .single();
+
+      final user = app_user.User.fromJson(response);
+      _currentUser.value = user;
+      _isLoggedIn.value = true;
+      _storage.write('userId', userId);
+      print('User profile loaded: ${user.email}');
+    } catch (e) {
+      print('Error loading user profile: $e');
+    }
   }
 
   void _checkAuthState() async {
     // Check if user is already logged in from Supabase
     final session = Supabase.instance.client.auth.currentSession;
     if (session != null) {
-      // Get user profile from database
-      try {
-        final response = await Supabase.instance.client
-            .from('users')
-            .select()
-            .eq('id', session.user.id)
-            .single();
-
-        final user = app_user.User.fromJson(response);
-        _currentUser.value = user;
-        _isLoggedIn.value = true;
-        print('User already logged in: ${user.email}');
-      } catch (e) {
-        print('Error loading user profile: $e');
-        // If profile doesn't exist, sign out
-        await signOut();
+      await _loadUserProfile(session.user.id);
+    } else {
+      // Try to restore from local storage
+      final userId = _storage.read('userId');
+      if (userId != null) {
+        try {
+          await _loadUserProfile(userId);
+        } catch (e) {
+          print('Failed to restore session: $e');
+          _storage.remove('userId');
+        }
       }
     }
   }
@@ -86,6 +116,7 @@ class AuthController extends GetxController {
         print('Controller: Signup successful, updating state');
         _currentUser.value = user;
         _isLoggedIn.value = true;
+        _storage.write('userId', user.id);
         Get.snackbar(
           'Success',
           'Account created successfully!',
@@ -142,6 +173,12 @@ class AuthController extends GetxController {
       if (user != null) {
         _currentUser.value = user;
         _isLoggedIn.value = true;
+        _storage.write('userId', user.id);
+        Get.snackbar(
+          'Success',
+          'Welcome back, ${user.fullName}!',
+          snackPosition: SnackPosition.TOP,
+        );
         return true;
       }
       return false;
@@ -159,6 +196,12 @@ class AuthController extends GetxController {
       await _authRepository.signOut();
       _currentUser.value = null;
       _isLoggedIn.value = false;
+      _storage.remove('userId');
+      Get.snackbar(
+        'Success',
+        'Logged out successfully',
+        snackPosition: SnackPosition.TOP,
+      );
     } catch (e) {
       Get.snackbar('Error', 'Failed to sign out: $e');
     } finally {
