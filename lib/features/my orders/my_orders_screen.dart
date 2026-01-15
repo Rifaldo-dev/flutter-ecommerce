@@ -50,6 +50,19 @@ class MyOrdersScreen extends StatelessWidget {
             _buildOrderList(context, OrderStatus.cancelled),
           ],
         ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            // Navigate to cart/checkout to create new order
+            Get.back(); // Go back to main screen
+            Get.snackbar(
+              'Info',
+              'Add items to cart and checkout to create a new order',
+              snackPosition: SnackPosition.BOTTOM,
+            );
+          },
+          child: const Icon(Icons.add_shopping_cart),
+          tooltip: 'Create New Order',
+        ),
       ),
     );
   }
@@ -81,6 +94,37 @@ class MyOrdersScreen extends StatelessWidget {
             order: orders[index],
             onViewDetails: () {
               // Handle view details action
+            },
+            onDelete: () async {
+              // Show confirmation dialog
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Order'),
+                  content:
+                      const Text('Are you sure you want to delete this order?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Delete',
+                          style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true && orders[index].id != null) {
+                final success =
+                    await orderController.deleteOrder(orders[index].id!);
+                if (success) {
+                  // Refresh the list
+                  (context as Element).markNeedsBuild();
+                }
+              }
             },
           ),
         );

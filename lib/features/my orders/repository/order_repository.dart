@@ -143,6 +143,22 @@ class OrderRepository {
     }
   }
 
+  // Delete order
+  Future<bool> deleteOrder(String orderId) async {
+    try {
+      // Delete order items first (foreign key constraint)
+      await _supabase.from('order_items').delete().eq('order_id', orderId);
+
+      // Delete order
+      await _supabase.from('orders').delete().eq('id', orderId);
+
+      return true;
+    } catch (e) {
+      print('Error deleting order: $e');
+      return false;
+    }
+  }
+
   // Fallback dummy data
   List<Order> _getDummyOrders() {
     return [

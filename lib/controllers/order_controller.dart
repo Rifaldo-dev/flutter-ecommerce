@@ -158,4 +158,21 @@ class OrderController extends GetxController {
   Future<bool> cancelOrder(String orderId) async {
     return await updateOrderStatus(orderId, OrderStatus.cancelled);
   }
+
+  // Delete order
+  Future<bool> deleteOrder(String orderId) async {
+    try {
+      final success = await _orderRepository.deleteOrder(orderId);
+      if (success) {
+        // Remove from local list
+        _orders.removeWhere((order) => order.id == orderId);
+        Get.snackbar('Success', 'Order deleted successfully');
+      }
+      return success;
+    } catch (e) {
+      print('Error deleting order: $e');
+      Get.snackbar('Error', 'Failed to delete order');
+      return false;
+    }
+  }
 }

@@ -6,11 +6,13 @@ import 'package:get/get.dart';
 class OrderCard extends StatelessWidget {
   final Order order;
   final VoidCallback onViewDetails;
+  final VoidCallback? onDelete;
 
   const OrderCard({
     super.key,
     required this.order,
     required this.onViewDetails,
+    this.onDelete,
   });
 
   @override
@@ -74,6 +76,12 @@ class OrderCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (onDelete != null)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: onDelete,
+                    tooltip: 'Delete Order',
+                  ),
               ],
             ),
           ),
