@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ecommerce_ui/utils/app_textstyles.dart';
 import 'package:ecommerce_ui/controllers/auth_controller.dart';
+import 'package:ecommerce_ui/controllers/profile_image_controller.dart';
 import 'package:ecommerce_ui/features/widgets/animated_icon_button.dart';
 import 'package:ecommerce_ui/features/widgets/animation_types.dart';
 
@@ -11,67 +12,85 @@ class ProfileImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final profileImageController = Get.put(ProfileImageController());
 
     return GetBuilder<AuthController>(
       builder: (authController) {
         final user = authController.currentUser;
 
-        return Center(
-          child: Stack(
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Theme.of(context).primaryColor,
-                    width: 2,
+        return Obx(() {
+          final isUploading = profileImageController.isUploading;
+
+          return Center(
+            child: Stack(
+              children: [
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).primaryColor,
+                      width: 2,
+                    ),
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   ),
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                  child: ClipOval(
+                    child: isUploading
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          )
+                        : user?.profileImageUrl != null
+                            ? Image.network(
+                                user!.profileImageUrl!,
+                                fit: BoxFit.cover,
+                                width: 120,
+                                height: 120,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildDefaultAvatar(context);
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  );
+                                },
+                              )
+                            : _buildDefaultAvatar(context),
+                  ),
                 ),
-                child: ClipOval(
-                  child: user?.profileImageUrl != null
-                      ? Image.network(
-                          user!.profileImageUrl!,
-                          fit: BoxFit.cover,
-                          width: 120,
-                          height: 120,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildDefaultAvatar(context);
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes !=
-                                        null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                              ),
-                            );
-                          },
-                        )
-                      : _buildDefaultAvatar(context),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: AnimatedIconButton(
-                  icon: Icons.camera_alt,
-                  onPressed: () => _showImagePickerBottomSheet(context),
-                  backgroundColor: Theme.of(context).primaryColor,
-                  color: Colors.white,
-                  size: 20,
-                  backgroundSize: 36,
-                  animationType: AnimationType.scale,
-                ),
-              ),
-            ],
-          ),
-        );
+                if (!isUploading)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: AnimatedIconButton(
+                      icon: Icons.camera_alt,
+                      onPressed: () => _showImagePickerBottomSheet(
+                          context, profileImageController),
+                      backgroundColor: Theme.of(context).primaryColor,
+                      color: Colors.white,
+                      size: 20,
+                      backgroundSize: 36,
+                      animationType: AnimationType.scale,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        });
       },
     );
   }
@@ -111,7 +130,8 @@ class ProfileImage extends StatelessWidget {
     );
   }
 
-  void _showImagePickerBottomSheet(BuildContext context) {
+  void _showImagePickerBottomSheet(
+      BuildContext context, ProfileImageController controller) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     Get.bottomSheet(
@@ -152,14 +172,31 @@ class ProfileImage extends StatelessWidget {
               context,
               'Take Photo',
               Icons.camera_alt_outlined,
-              () => Get.back(),
+              () {
+                Get.back();
+                controller.pickImageFromCamera();
+              },
             ),
             const SizedBox(height: 16),
             _buildOptionTile(
               context,
               'Choose from Gallery',
               Icons.photo_library_outlined,
-              () => Get.back(),
+              () {
+                Get.back();
+                controller.pickImageFromGallery();
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildOptionTile(
+              context,
+              'Remove Photo',
+              Icons.delete_outline,
+              () {
+                Get.back();
+                controller.removeProfileImage();
+              },
+              isDestructive: true,
             ),
             const SizedBox(height: 16),
           ],
@@ -174,8 +211,9 @@ class ProfileImage extends StatelessWidget {
     BuildContext context,
     String title,
     IconData icon,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool isDestructive = false,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
@@ -200,7 +238,8 @@ class ProfileImage extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: Theme.of(context).primaryColor,
+              color:
+                  isDestructive ? Colors.red : Theme.of(context).primaryColor,
               size: 24,
             ),
             const SizedBox(width: 16),
@@ -208,7 +247,9 @@ class ProfileImage extends StatelessWidget {
               title,
               style: AppTextStyle.withColor(
                 AppTextStyle.bodyMedium,
-                Theme.of(context).textTheme.bodyLarge!.color!,
+                isDestructive
+                    ? Colors.red
+                    : Theme.of(context).textTheme.bodyLarge!.color!,
               ),
             ),
             const Spacer(),

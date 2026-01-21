@@ -105,8 +105,11 @@ class AuthRepository {
       final updates = <String, dynamic>{};
       if (fullName != null) updates['full_name'] = fullName;
       if (phoneNumber != null) updates['phone_number'] = phoneNumber;
+      // Allow null to remove profile image
       if (profileImageUrl != null) {
         updates['profile_image_url'] = profileImageUrl;
+      } else {
+        updates['profile_image_url'] = null;
       }
 
       if (updates.isEmpty) return null;

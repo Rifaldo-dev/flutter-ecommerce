@@ -27,14 +27,11 @@ class AuthController extends GetxController {
   }
 
   void _listenToAuthChanges() {
-    // Listen to Supabase auth state changes
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final session = data.session;
       if (session != null) {
-        // User is logged in
         _loadUserProfile(session.user.id);
       } else {
-        // User is logged out
         _currentUser.value = null;
         _isLoggedIn.value = false;
         _storage.remove('userId');
@@ -54,19 +51,16 @@ class AuthController extends GetxController {
       _currentUser.value = user;
       _isLoggedIn.value = true;
       _storage.write('userId', userId);
-      print('User profile loaded: ${user.email}');
     } catch (e) {
       print('Error loading user profile: $e');
     }
   }
 
-  void _checkAuthState() async {
-    // Check if user is already logged in from Supabase
+  Future<void> _checkAuthState() async {
     final session = Supabase.instance.client.auth.currentSession;
     if (session != null) {
       await _loadUserProfile(session.user.id);
     } else {
-      // Try to restore from local storage
       final userId = _storage.read('userId');
       if (userId != null) {
         try {
@@ -81,13 +75,7 @@ class AuthController extends GetxController {
 
   void _loadInitialState() {
     _isFirstTime.value = _storage.read('isFirstTime') ?? true;
-    // Remove auth status check for simplicity
   }
-
-  // Remove auth state listening method
-
-  // Google Sign In - Removed for simplicity
-  // Use email/password authentication instead
 
   void setFirstTimeDone() {
     _isFirstTime.value = false;
@@ -103,8 +91,6 @@ class AuthController extends GetxController {
     try {
       _isLoading.value = true;
 
-      print('Controller: Starting signup process');
-
       final user = await _authRepository.signUp(
         email: email,
         password: password,
@@ -113,7 +99,6 @@ class AuthController extends GetxController {
       );
 
       if (user != null) {
-        print('Controller: Signup successful, updating state');
         _currentUser.value = user;
         _isLoggedIn.value = true;
         _storage.write('userId', user.id);
@@ -124,7 +109,6 @@ class AuthController extends GetxController {
         );
         return true;
       } else {
-        print('Controller: Signup failed - no user returned');
         Get.snackbar(
           'Error',
           'Failed to create account. Please try again.',
@@ -133,21 +117,7 @@ class AuthController extends GetxController {
         return false;
       }
     } catch (e) {
-      print('Controller: Signup error - $e');
-
-      String errorMessage = 'Failed to create account';
-
-      // Parse common Supabase errors
-      if (e.toString().contains('already registered')) {
-        errorMessage = 'Email is already registered';
-      } else if (e.toString().contains('Invalid email')) {
-        errorMessage = 'Please enter a valid email address';
-      } else if (e.toString().contains('Password')) {
-        errorMessage = 'Password must be at least 6 characters';
-      } else if (e.toString().contains('network')) {
-        errorMessage = 'Network error. Please check your connection';
-      }
-
+      final errorMessage = _parseAuthError(e.toString());
       Get.snackbar(
         'Registration Failed',
         errorMessage,
@@ -250,14 +220,16 @@ class AuthController extends GetxController {
     }
   }
 
-  // Legacy methods for compatibility
-  void login() {
-    _isLoggedIn.value = true;
-    _storage.write('isLoggedIn', true);
-  }
-
-  void logout() {
-    signOut();
-    _storage.write('isLoggedIn', false);
+  String _parseAuthError(String error) {
+    if (error.contains('already registered')) {
+      return 'Email is already registered';
+    } else if (error.contains('Invalid email')) {
+      return 'Please enter a valid email address';
+    } else if (error.contains('Password')) {
+      return 'Password must be at least 6 characters';
+    } else if (error.contains('network')) {
+      return 'Network error. Please check your connection';
+    }
+    return 'Failed to create account';
   }
 }

@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTextStyle {
-  // Fallback font family
   static const String _fallbackFont = 'system-ui';
 
-  // Helper method to create text style with fallback
   static TextStyle _createTextStyle({
     required double fontSize,
     required FontWeight fontWeight,
@@ -20,7 +18,6 @@ class AppTextStyle {
         letterSpacing: letterSpacing,
       );
     } catch (e) {
-      // Fallback to system font if Google Fonts fails
       return TextStyle(
         fontFamily: _fallbackFont,
         fontSize: fontSize,
@@ -47,6 +44,11 @@ class AppTextStyle {
 
   static TextStyle h3 = _createTextStyle(
     fontSize: 18,
+    fontWeight: FontWeight.w600,
+  );
+
+  static TextStyle h4 = _createTextStyle(
+    fontSize: 16,
     fontWeight: FontWeight.w600,
   );
 
@@ -85,12 +87,23 @@ class AppTextStyle {
     fontWeight: FontWeight.w500,
   );
 
-  // Helper functions for color variations
-  static TextStyle withColor(TextStyle style, Color color) {
-    return style.copyWith(color: color);
-  }
+  static TextStyle labelSmall = _createTextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+  );
 
-  static TextStyle withWeight(TextStyle style, FontWeight weight) {
-    return style.copyWith(fontWeight: weight);
-  }
+  static TextStyle caption = _createTextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+  );
+
+  // Helper functions
+  static TextStyle withColor(TextStyle style, Color color) =>
+      style.copyWith(color: color);
+
+  static TextStyle withWeight(TextStyle style, FontWeight weight) =>
+      style.copyWith(fontWeight: weight);
+
+  static TextStyle withSize(TextStyle style, double size) =>
+      style.copyWith(fontSize: size);
 }
